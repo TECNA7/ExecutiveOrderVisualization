@@ -64,12 +64,36 @@
         marker: { size: 10 }
       }));
 
-      const layout = {
+      // Add annotations for EO counts
+        const annotations = Object.entries(grouped).map(([president, group]) => {
+        // Find the latest date for that president
+        const dates = group.x.map(d => new Date(d));
+        const maxDate = new Date(Math.max(...dates));
+        const count = group.x.length;
+
+        return {
+            x: maxDate.toISOString().split("T")[0],
+            y: president,
+            text: `📝 ${count} orders`,
+            showarrow: true,
+            arrowhead: 4,
+            ax: 40,
+            ay: -20,
+            font: { size: 12, color: 'black' },
+            bgcolor: 'rgba(255,255,255,0.7)',
+            bordercolor: 'gray',
+            borderwidth: 1
+        };
+        });
+
+        const layout = {
         title: 'Executive Orders Over Time',
         hovermode: 'closest',
         xaxis: { title: 'Signing Date' },
         yaxis: { title: 'President', automargin: true },
-      };
+        annotations: annotations
+        };
+
 
       Plotly.newPlot('timeline', traces, layout);
 
