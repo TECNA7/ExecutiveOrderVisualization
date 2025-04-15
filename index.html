@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Executive Orders Timeline</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: Arial; margin: 40px; }
+    #timeline { width: 100%; height: 600px; }
+  </style>
+</head>
+<body>
+  <h2>Executive Orders Timeline Explorer</h2>
+  <div id="timeline"></div>
+
+  <script>
+    function getPresident(dateStr) {
+      const date = new Date(dateStr);
+      const presidents = [
+        { name: "Joe Biden", start: "2021-01-20" },
+        { name: "Donald Trump", start: "2017-01-20" },
+        { name: "Barack Obama", start: "2009-01-20" },
+        { name: "George W. Bush", start: "2001-01-20" },
+        { name: "Bill Clinton", start: "1993-01-20" },
+        { name: "George H. W. Bush", start: "1989-01-20" },
+        { name: "Ronald Reagan", start: "1981-01-20" }
+      ];
+      for (let i = 0; i < presidents.length; i++) {
+        const start = new Date(presidents[i].start);
+        const end = i === 0 ? new Date() : new Date(presidents[i - 1].start);
+        if (date >= start && date < end) {
+          return presidents[i].name;
+        }
+      }
+      return "Unknown";
+    }
+
+    d3.csv("./executive_orders.csv").then(function(data) {
+      const grouped = {};
+
+      data.forEach(d => {
+        const date = d.signing_date;
+        const title = d.title;
+        const url = d.html_url || d.pdf_url || "";
+        const president = getPresident(date);
+
+        if (!grouped[president]) grouped[president] = { x: [], y: [], text: [], customdata: [] };
+        grouped[president].x.push(date);
+        grouped[president].y.push(president);
+        grouped[president].text.push(`${d.executive_order_number ? "EO " + d.executive_order_number + ": " : ""}${title}`);
+        grouped[president].customdata.push(url);
+      });
+
+      const traces = Object.keys(grouped).map(president => ({
+        type: 'scatter',
+        mode: 'markers',
+        name: president,
+        x: grouped[president].x,
+        y: grouped[president].y,
+        text: grouped[president].text,
+        customdata: grouped[president].customdata,
+        marker: { size: 10 }
+      }));
+
+      const layout = {
+        title: 'Executive Orders Over Time',
+        hovermode: 'closest',
+        xaxis: { title: 'Signing Date' },
+        yaxis: { title: 'President', automargin: true },
+      };
+
+      Plotly.newPlot('timeline', traces, layout);
+
+      const plotDiv = document.getElementById('timeline');
+      plotDiv.on('plotly_click', function(data){
+        const url = data.points[0].customdata;
+        if (url) window.open(url, '_blank');
+      });
+    });
+  </script>
+</body>
+</html>
