@@ -36,10 +36,10 @@
       }
       return "Unknown";
     }
-    
 
     d3.csv("./executive_orders.csv").then(function(data) {
       const grouped = {};
+      const pointCounts = {}; // NEW: count of (president, date)
 
       data.forEach(d => {
         const parseDate = d3.timeParse("%m/%d/%Y");
@@ -51,11 +51,15 @@
         const url = d.html_url || d.pdf_url || "";
         const president = getPresident(date);
 
-        if (!grouped[president]) grouped[president] = { x: [], y: [], text: [], customdata: [] };
+        const key = `${president}__${date}`;
+        pointCounts[key] = (pointCounts[key] || 0) + 1;
+
+        if (!grouped[president]) grouped[president] = { x: [], y: [], text: [], customdata: [], size: [] };
         grouped[president].x.push(date);
         grouped[president].y.push(president);
-        grouped[president].text.push(`${d.executive_order_number ? "EO " + d.executive_order_number + ": " : ""}${title}`);
+        grouped[president].text.push(`(${pointCounts[key]} EO${pointCounts[key] > 1 ? "s" : ""}) ${d.executive_order_number ? "EO " + d.executive_order_number + ": " : ""}${title}`);
         grouped[president].customdata.push(url);
+        grouped[president].size.push(pointCounts[key] * 5); // scale factor
       });
 
       const traces = Object.keys(grouped).map(president => ({
@@ -66,44 +70,51 @@
         y: grouped[president].y,
         text: grouped[president].text,
         customdata: grouped[president].customdata,
-        marker: { size: 10 }
+        marker: {
+          size: grouped[president].size,
+          sizemode: 'diameter',
+          sizeref: 2,
+          sizemin: 8
+        }
       }));
 
-      // Add annotations for EO counts
-        const annotations = Object.entries(grouped).map(([president, group]) => {
-        // Find the latest date for that president
+      // EO count annotations
+      const annotations = Object.entries(grouped).map(([president, group]) => {
         const dates = group.x.map(d => new Date(d));
         const maxDate = new Date(Math.max(...dates));
         const count = group.x.length;
 
         return {
-            x: maxDate.toISOString().split("T")[0],
-            y: president,
-            text: `📝 ${count} orders`,
-            showarrow: true,
-            arrowhead: 4,
-            ax: 40,
-            ay: -20,
-            font: { size: 12, color: 'black' },
-            bgcolor: 'rgba(255,255,255,0.7)',
-            bordercolor: 'gray',
-            borderwidth: 1
+          x: maxDate.toISOString().split("T")[0],
+          y: president,
+          text: `📝 ${count} orders`,
+          showarrow: true,
+          arrowhead: 4,
+          ax: 40,
+          ay: -20,
+          font: { size: 12, color: 'black' },
+          bgcolor: 'rgba(255,255,255,0.7)',
+          bordercolor: 'gray',
+          borderwidth: 1
         };
-        });
+      });
 
-        const layout = {
+      const layout = {
         title: 'Executive Orders Over Time',
         hovermode: 'closest',
-        xaxis: { title: 'Signing Date', type: 'date', autorange: true},
-        yaxis: { title: 'President', automargin: true },
+        xaxis: { title: 'Signing Date', type: 'date', autorange: true },
+        yaxis: {
+          title: 'President',
+          automargin: true,
+          categoryorder: 'array',
+          categoryarray: Object.keys(grouped).reverse() // newest at bottom
+        },
         annotations: annotations
-        };
-
+      };
 
       Plotly.newPlot('timeline', traces, layout);
 
-      const plotDiv = document.getElementById('timeline');
-      plotDiv.on('plotly_click', function(data){
+      document.getElementById('timeline').on('plotly_click', function(data){
         const url = data.points[0].customdata;
         if (url) window.open(url, '_blank');
       });
