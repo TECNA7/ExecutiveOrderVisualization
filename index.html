@@ -36,12 +36,17 @@
       }
       return "Unknown";
     }
+    
 
     d3.csv("./executive_orders.csv").then(function(data) {
       const grouped = {};
 
       data.forEach(d => {
-        const date = d.signing_date;
+        const parseDate = d3.timeParse("%m/%d/%Y");
+        const dateObj = parseDate(d.signing_date.trim());
+        const date = dateObj ? dateObj.toISOString().split("T")[0] : null;
+        if (!date) return;
+
         const title = d.title;
         const url = d.html_url || d.pdf_url || "";
         const president = getPresident(date);
