@@ -58,16 +58,27 @@
         grouped[president].customdata.push(url);
       });
 
-      const traces = Object.keys(grouped).map(president => ({
-        type: 'scatter',
-        mode: 'markers',
-        name: president,
-        x: grouped[president].x,
-        y: grouped[president].y,
-        text: grouped[president].text,
-        customdata: grouped[president].customdata,
-        marker: { size: 10 }
-      }));
+      const traces = Object.keys(grouped).map(president => {
+        let color = 'gray'; 
+
+        if (president.includes('George W. Bush') || president.includes('Donald Trump')) {
+          color = 'red';
+        } else if (president.includes('Barack Obama') || president.includes('Joe Biden')) {
+          color = 'blue';
+        }
+
+        return {
+          type: 'scatter',
+          mode: 'markers',
+          name: president,
+          x: grouped[president].x,
+          y: grouped[president].y,
+          text: grouped[president].text,
+          customdata: grouped[president].customdata,
+          marker: { size: 10, color: color }
+        };
+      });
+
 
       // Add annotations for EO counts
         const annotations = Object.entries(grouped).map(([president, group]) => {
